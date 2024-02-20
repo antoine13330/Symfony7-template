@@ -13,6 +13,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\HttpClient\HttpClient;
+
 #[AsController]
 class RegisterController extends AbstractController
 {
@@ -51,12 +53,14 @@ class RegisterController extends AbstractController
         }
         $this->entityManager->persist($user);
         $this->entityManager->flush();
-
-        $token = $this->JWTManager->create($user);
-        $user = $serializer->serialize([
-            'user' => $user,
-            'token' => $token
-        ], 'json', ['groups' => 'user:deep']);
-        return new JsonResponse( $user , 200 , [] , true);
+        $client = HttpClient::create();
+        $response = $client->request('POST', '/api/login_check', [
+            'json' => [
+                'username' => $data['username'],
+                'password' => $data['password'],
+            ],
+        ]);
+        $content = $response->toArray();
+        return new JsonResponse($content, 200, ['Content-Type' => 'application/json'],true);
     }
 }

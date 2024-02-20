@@ -14,6 +14,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: AuthUserRepository::class)]
 #[ApiResource(
+    shortName: 'Register',
     operations: [
         new Post(
             name: 'register',
