@@ -13,7 +13,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Component\HttpClient\HttpClient;
+use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 
 #[AsController]
 class RegisterController extends AbstractController
@@ -22,13 +23,19 @@ class RegisterController extends AbstractController
     private $passwordHasher;
     private $JWTManager;
     private $validator;
+    private $refreshJwtManager;
+    private $refreshTokenGenerator;
 
     public function __construct(
         EntityManagerInterface $entityManager, 
         UserPasswordHasherInterface $passwordHasher, 
         JWTTokenManagerInterface $JWTManager,
-        ValidatorInterface $validator
+        ValidatorInterface $validator,
+        RefreshTokenGeneratorInterface $refreshJwtManager,
+        RefreshTokenManagerInterface $refreshTokenGenerator
     ) {
+        $this->refreshJwtManager = $refreshJwtManager;
+        $this->refreshTokenGenerator = $refreshTokenGenerator;
         $this->entityManager = $entityManager;
         $this->passwordHasher = $passwordHasher;
         $this->JWTManager = $JWTManager;
@@ -53,14 +60,17 @@ class RegisterController extends AbstractController
         }
         $this->entityManager->persist($user);
         $this->entityManager->flush();
-        $client = HttpClient::create();
-        $response = $client->request('POST', '/api/login_check', [
-            'json' => [
-                'username' => $data['username'],
-                'password' => $data['password'],
-            ],
-        ]);
-        $content = $response->toArray();
-        return new JsonResponse($content, 200, ['Content-Type' => 'application/json'],true);
+        $token = $this->JWTManager->create($user);
+        $refreshToken = $this->refreshJwtManager->createForUserWithTtl($user, 2592000);
+        $this->refreshTokenGenerator->save($refreshToken);
+
+        $content = [
+            'user' => $user,
+            'token' => $token,
+            'refreshToken' => $refreshToken->getRefreshToken(),
+            'refreshTokenExpireAt' => $refreshToken->getValid()
+        ];
+        $jsonContent = $serializer->serialize($content, 'json');
+        return new JsonResponse($jsonContent, 200, ['Content-Type' => 'application/json'],true);
     }
 }

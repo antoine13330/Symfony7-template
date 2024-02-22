@@ -26,8 +26,10 @@ security:
             jwt: ~
         refresh:
             pattern: ^/api/token/refresh
+            stateless: true
     access_control:
         - { path: ^/api/login_check, roles: PUBLIC_ACCESS }
+        - { path: ^/api/refresh/token, roles: PUBLIC_ACCESS }
         - { path: ^/api/token/refresh, roles: PUBLIC_ACCESS }
         - { path: ^/api/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/auth_users/, roles: ROLE_ADMIN }
