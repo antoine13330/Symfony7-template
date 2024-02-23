@@ -8,7 +8,9 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
 use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Event\AuthenticationSuccessEvent;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Attribute\AsController;
@@ -20,11 +22,14 @@ class RefreshTokenController extends AbstractController
     private JWTTokenManagerInterface  $jwtManager;
     private RefreshTokenManagerInterface $refreshTokenManager;
     private RefreshTokenGeneratorInterface $refreshTokenGenerator;
+    private EventDispatcherInterface $eventDispatcher;
     public function __construct(
         JWTTokenManagerInterface $jwtManager,
         RefreshTokenManagerInterface $refreshTokenManager,
         RefreshTokenGeneratorInterface $refreshTokenGenerator,
+        EventDispatcherInterface $eventDispatcher
     ) {
+        $this->eventDispatcher = $eventDispatcher;
         $this->jwtManager = $jwtManager;
         $this->refreshTokenManager = $refreshTokenManager;
         $this->refreshTokenGenerator = $refreshTokenGenerator;
@@ -62,6 +67,8 @@ class RefreshTokenController extends AbstractController
             $refreshToken = $this->refreshTokenGenerator->createForUserWithTtl($authUser, 2592000);
             $this->refreshTokenManager->save($refreshToken);
 
+            $event = new AuthenticationSuccessEvent(['token' => $token], $authUser, new JsonResponse());
+            $this->eventDispatcher->dispatch($event, AuthenticationSuccessEvent::class);
             return new JsonResponse(['token' => $token, 'refreshToken' => $refreshToken->getRefreshToken()]);
 
         } catch (HttpException $e) {
