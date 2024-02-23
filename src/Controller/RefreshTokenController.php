@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use App\Repository\AuthUserRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -13,6 +12,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Attribute\AsController;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 #[AsController]
 class RefreshTokenController extends AbstractController
@@ -36,25 +36,26 @@ class RefreshTokenController extends AbstractController
     ): JsonResponse
     {
         try {
-            $refreshToken = json_decode($request->getContent(), true)['refreshToken'];
+            $refreshToken = json_decode($request->getContent(), true);
+            $refreshToken = $refreshToken['refreshToken'] ?? null;
             if (!$refreshToken) {
-                throw new \Exception('Refresh token is missing');
+                throw new HttpException(Response::HTTP_BAD_REQUEST,'Refresh token is missing');
             }
 
             $refreshToken = $this->refreshTokenManager->get($refreshToken);
             if (!$refreshToken) {
-                throw new \Exception('Refresh token not found in databse');
+                throw new HttpException(Response::HTTP_UNAUTHORIZED,'Refresh token not found in database');
             }
 
             $now = new \DateTime();
             if ($now > $refreshToken->getValid()) {
-                throw new \Exception('Refresh token is expired');
+                throw new HttpException(Response::HTTP_UNAUTHORIZED,'Refresh token is expired');
             }
             
             $user = $refreshToken->getUsername();
             $authUser = $authUserRepository->findOneBy(['username' => $user]);
             if (!$authUser) {
-                throw new \Exception('User not found');
+                throw new HttpException(Response::HTTP_UNAUTHORIZED,'User not found');
             }
 
             $token = $this->jwtManager->create($authUser);
@@ -63,8 +64,8 @@ class RefreshTokenController extends AbstractController
 
             return new JsonResponse(['token' => $token, 'refreshToken' => $refreshToken->getRefreshToken()]);
 
-        } catch (\Exception $e) {
-            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        } catch (HttpException $e) {
+            return new JsonResponse(['error' => $e->getMessage()], $e->getStatusCode());
         }
     }
 
