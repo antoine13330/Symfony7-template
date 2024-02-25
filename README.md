@@ -16,7 +16,7 @@ Did a shell so you won't have to enter 10 commands to start the project :
 Your welcome 🍃
 
 ## API Documentation
-Thanks to ApiPlatform documentation you can access the api doc here http://localhost/api
+Thanks to ApiPlatform documentation you can access the api doc here http://localhost:8000/api
 
 ### Features
 
