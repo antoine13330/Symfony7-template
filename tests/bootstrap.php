@@ -16,6 +16,6 @@ $_SERVER['APP_ENV'] = 'test';
 
 passthru(sprintf('php bin/console doctrine:database:create --if-not-exists --env=test'));
 passthru(sprintf('php bin/console doctrine:schema:drop --force --env=test'));
-passthru(sprintf('php bin/console d:s:u --force --force --env=test'));
+passthru(sprintf('php bin/console d:s:u --force --complete --env=test'));
 passthru(sprintf('php bin/console cache:clear --env=test'));
 
